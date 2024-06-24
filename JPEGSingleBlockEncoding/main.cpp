@@ -12,7 +12,7 @@ using namespace std;
 
 //prints coefficients, shows how many coefficients are in between the coefficients
 //and how many beats long they are
-void readBlock(short block[64]){
+void readBlock(int8_t block[64]){
     
     cout << "DCT: " << block[0] << endl;
     
@@ -46,10 +46,10 @@ void testBitSet(){
     }
 }*/
 
-constexpr int getNumOfBits(short num){
+const int getNumOfBits(int8_t num){
     
     const size_t sizeBits = sizeof(num) * 8;
-    bitset<sizeBits> bits(num);
+    bitset<8> bits(num);
     for (int i = sizeBits - 1; i >= 0 ; i--) {
         if (bits[i] == 0) {
             continue;
@@ -62,27 +62,58 @@ constexpr int getNumOfBits(short num){
 }
 
 
-template <int size>
-bitset<size> getImportantBits(short num){
+/*
+bitset<8> getImportantBits(int8_t num){
     
     num = abs(num);
+    int size = getNumOfBits(num);
     
     if (size == 1) {
-        return bitset<size>(0);
+        return bitset<8>(0);
     }
     
     bitset<size> importantBits;
-    bitset<sizeof(num) * 8> bits(num);
+    bitset<8> bits(num);
     for (int i = 0; i < size; i++) {
         importantBits[i] = bits[i];
     }
     
     return importantBits;
     
+}*/
+
+string intToBitstring(int8_t num){
+    
+    
+    bitset<8> bits(abs(num));
+    
+    if (num < 0) {
+        bits.flip();
+        
+    }
+    
+    return bits.to_string().substr(8-getNumOfBits(abs(num)));
+    
+
+}
+
+template <int T>
+bitset<T> intToBitset(int8_t num){
+    
+    bitset<T> bits(abs(num));
+    
+    if (num < 0) {
+        bits.flip();
+        
+        
+    }
+    
+    return bits;
+    
 }
 
 //encodes the block but without the huffman
-void encodeBlockNoHuffman(short block[64]){
+void encodeBlockNoHuffman(int8_t block[64]){
     
     cout << "DCT: " << block[0] << endl;
     
@@ -94,7 +125,7 @@ void encodeBlockNoHuffman(short block[64]){
             
         }
         else{
-            //cout << zeroCounter << "/" << getNumOfBits(block[i]) << ";  val: " << block[i] << " binary: " << getImportantBits<getNumOfBits(block[i])>(block[i]) << endl;
+            cout << zeroCounter << "/" << getNumOfBits(block[i]) << ";  val: " << int(block[i]) << " binary: " <<  intToBitstring(block[i])<< endl;
             zeroCounter = 0;
         }
         
@@ -108,7 +139,7 @@ void encodeBlockNoHuffman(short block[64]){
 int main(int argc, const char * argv[]) {
     
     //8 by 8 qunatisized DCT pixel block written in zigzag order
-    short testedBlock[64] = {52, 0, -6, 0, 3, 0, 0, 0,
+    int8_t testedBlock[64] = {52, 0, -6, 0, 3, 0, 0, 0,
                             4, -2, 1, 0, -1, 0, 0, 0,
                             0, 0, 0, 0, 0, 0, 0, 0,
                             0, 0, 0, 0, 0, 0, 0, 0,
@@ -122,7 +153,9 @@ int main(int argc, const char * argv[]) {
     
     
     readBlock(testedBlock);
-    getImportantBits<numOfBits>(10);
+    encodeBlockNoHuffman(testedBlock);
+
+  //cout << getImportantBits<numOfBits>(10).to_string() << endl;
     
     
     return 0;
