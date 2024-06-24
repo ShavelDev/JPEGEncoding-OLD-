@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <stdlib.h>
+#include <vector>
 #include "bitset"
 using namespace std;
 
@@ -24,7 +25,7 @@ void readBlock(int8_t block[64]){
             
         }
         else{
-            cout << zeroCounter << "/" << block[i] << endl;
+            cout << zeroCounter << "/" << int(block[i]) << endl;
             zeroCounter = 0;
         }
         
@@ -112,8 +113,38 @@ bitset<T> intToBitset(int8_t num){
     
 }
 
+bitset<8> getHuffmanSymbol(int zerosCount, int numOfBits){
+    bitset<4> zeros(zerosCount);
+    bitset<4> length(numOfBits);
+    
+    
+   bitset<8> result;
+    
+    // Copy bits from the first bitset into the higher part of the result
+    for (size_t i = 0; i < 4; ++i) {
+        result[i + 4] = zeros[i];
+    }
+    
+    // Copy bits from the second bitset into the lower part of the result
+    for (size_t i = 0; i < 4; ++i) {
+        result[i] = length[i];
+    }
+    
+    return result;
+}
+
+struct node{
+    int freq;
+    const bitset<8> huffmanSymbol;
+    unique_ptr<node>  left = nullptr;
+    unique_ptr<node> right = nullptr;
+    
+    node(int f, const bitset<8>& symbol)
+            : freq(f), huffmanSymbol(symbol) {}
+};
+
 //encodes the block but without the huffman
-void encodeBlockNoHuffman(int8_t block[64]){
+void encodeBlockNoHuffman(int8_t block[64], vector<unique_ptr<node>>& huffmanSymbols){
     
     cout << "DCT: " << block[0] << endl;
     
@@ -125,7 +156,26 @@ void encodeBlockNoHuffman(int8_t block[64]){
             
         }
         else{
-            cout << zeroCounter << "/" << getNumOfBits(block[i]) << ";  val: " << int(block[i]) << " binary: " <<  intToBitstring(block[i])<< endl;
+            cout << zeroCounter << "/" << getNumOfBits(abs(block[i])) << ";  val: " << int(block[i]) <<  endl;
+            cout << "Huffman Symbol: " <<  getHuffmanSymbol( zeroCounter,getNumOfBits(abs(block[i])))<< " binary: " <<  intToBitstring(block[i])<< endl << endl;
+            
+            bitset<8> currSymbol = getHuffmanSymbol(zeroCounter, getNumOfBits(abs(block[i])));
+            
+            bool symInNodes = false;
+            for (int j = 0; j < huffmanSymbols.size(); j++) {
+                if (huffmanSymbols[j]->huffmanSymbol == currSymbol) {
+                    symInNodes = true;
+                    huffmanSymbols[j]->freq += 1;
+                    break;
+
+                }
+            }
+            if (!symInNodes) {
+                huffmanSymbols.push_back(std::make_unique<node>(1, currSymbol));
+            }
+            
+            
+            
             zeroCounter = 0;
         }
         
@@ -134,14 +184,80 @@ void encodeBlockNoHuffman(int8_t block[64]){
     cout << "EOB" << endl;
 }
 
+void findCodes(){
+    
+}
+
+
+
+void joinTheLowest(vector<unique_ptr<node>>& nodes){
+    
+    
+    int lowestInd = -1;
+    int secondLow = -1;
+    int minVal = INT_MAX;
+    int secondMinVal = INT_MAX;
+    
+    for (int i = 0; i < nodes.size(); i++) {
+        if (nodes[i]->freq < minVal) {
+            secondLow = lowestInd;
+            secondMinVal = minVal;
+            lowestInd = i;
+            minVal = nodes[i]->freq;
+        } else if (nodes[i]->freq < secondMinVal) {
+            secondLow = i;
+            secondMinVal = nodes[i]->freq;
+        }
+    }
+    
+    
+    int firstIndex = lowestInd < secondLow ? lowestInd : secondLow;
+    int secondIndex = lowestInd > secondLow ? lowestInd : secondLow;
+    unique_ptr<node> newNode = make_unique<node>((nodes[lowestInd]->freq + nodes[secondLow]->freq), bitset<8>(0));
+    newNode->left = std::move(nodes[secondLow]);
+    newNode->right = std::move(nodes[lowestInd]);
+    nodes.push_back(std::move(newNode));
+    
+    nodes.erase(nodes.begin() + secondIndex);
+    nodes.erase(nodes.begin() + firstIndex);
+    
+    
+}
+
+struct code{
+    bitset<8> huffmanSym;
+    string code;
+    int branchDepth;
+};
+
+void calculateCodes(vector<code>& codes, unique_ptr<node>& node, string code, int branchNum){
+    
+    if (node->left != nullptr) {
+        string newCode = code + "0";
+        calculateCodes(codes, node->left, newCode, branchNum + 1);
+    }
+    
+    if (node->right != nullptr) {
+        string newCode = code + "1";
+        calculateCodes(codes, node->right, newCode, branchNum + 1);
+    }
+    
+    if (node->left == nullptr && node->right == nullptr) {
+        codes.push_back({node->huffmanSymbol, code, branchNum});
+        cout << "Symbol: " << node->huffmanSymbol << " Code: " << code << " Occurances: " << node->freq << " Branch: "<< branchNum<< endl;
+        
+    }
+    
+}
+
 
 
 int main(int argc, const char * argv[]) {
     
     //8 by 8 qunatisized DCT pixel block written in zigzag order
     int8_t testedBlock[64] = {52, 0, -6, 0, 3, 0, 0, 0,
-                            4, -2, 1, 0, -1, 0, 0, 0,
-                            0, 0, 0, 0, 0, 0, 0, 0,
+                            4, -2, 1, 0, -1, 0, -6, 0,
+                            5, 0, 0, 0, 0, 0, 0, 0,
                             0, 0, 0, 0, 0, 0, 0, 0,
                             0, 0, 0, 0, 0, 0, 0, 0,
                             0, 0, 0, 0, 0, 0, 0, 0,
@@ -153,8 +269,29 @@ int main(int argc, const char * argv[]) {
     
     
     readBlock(testedBlock);
-    encodeBlockNoHuffman(testedBlock);
+    
+    vector<unique_ptr<node>> nodes;
+    encodeBlockNoHuffman(testedBlock, nodes);
+    
+    while (nodes.size() != 1) {
+        joinTheLowest(nodes);
+    }
 
+    
+    unique_ptr<node> head = std::move(nodes[0]);
+    vector<code> codes;
+    
+    calculateCodes(codes, head, "", 0);
+    
+    int codeLengthMap[16] = {};
+    for (int i = 0; i < codes.size(); i++) {
+        codeLengthMap[codes[i].branchDepth-1]++;
+    }
+    
+    for (int i = 0; i < 16; i++) {
+        cout << "Length: " << i+1 << " Num of codes: " << codeLengthMap[i] << endl;
+    }
+    
   //cout << getImportantBits<numOfBits>(10).to_string() << endl;
     
     
