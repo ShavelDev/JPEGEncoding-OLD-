@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <vector>
 #include "bitset"
+#include "CompresserJPG.hpp"
 using namespace std;
 
 //prints coefficients, shows how many coefficients are in between the coefficients
@@ -132,7 +133,7 @@ bitset<8> getHuffmanSymbol(int zerosCount, int numOfBits){
     
     return result;
 }
-
+/*
 struct node{
     int freq;
     const bitset<8> huffmanSymbol;
@@ -141,7 +142,7 @@ struct node{
     
     node(int f, const bitset<8>& symbol)
             : freq(f), huffmanSymbol(symbol) {}
-};
+};*/
 
 //encodes the block but without the huffman
 void encodeBlockNoHuffman(int8_t block[64], vector<unique_ptr<node>>& huffmanSymbols){
@@ -224,13 +225,14 @@ void joinTheLowest(vector<unique_ptr<node>>& nodes){
     
 }
 
+/*
 struct code{
     bitset<8> huffmanSym;
     bitset<8> codeInBits;
     string code;
     int branchDepth;
 };
-
+*/
 void calculateCodes(vector<code>& codes, unique_ptr<node>& node, string code, int branchNum){
     
     if (node->left != nullptr) {
@@ -259,6 +261,8 @@ bool compareByBranchDepth(const code& a, const code& b) {
 
 
 int main(int argc, const char * argv[]) {
+    /*
+    
     
     //8 by 8 qunatisized DCT pixel block written in zigzag order
     int8_t testedBlock[64] = {52, 0, -6, 0, 3, 0, 0, 0,
@@ -307,7 +311,7 @@ int main(int argc, const char * argv[]) {
         for (int j = 0; j < codeLengthMap[i]; j++) {
             codes[currCode].codeInBits = bitset<8>(codeCandidate);
             
-            cout << "Symbol: " << codes[currCode].huffmanSym << " code: " << codes[currCode].codeInBits << " code-length: "<< codes[currCode].branchDepth << endl;
+            cout << "Symbol: " << codes[currCode].huffmanSym << " code: " << codes[currCode].codeInBits.to_string().substr(8-codes[currCode].branchDepth) << " code-length: "<< codes[currCode].branchDepth << endl;
             codeCandidate++;
             currCode++;
             
@@ -319,6 +323,9 @@ int main(int argc, const char * argv[]) {
     }
     
   //cout << getImportantBits<numOfBits>(10).to_string() << endl;
+    */
+    
+    CompresserJPG("TestBitMap2.bmp");
     
     
     return 0;
