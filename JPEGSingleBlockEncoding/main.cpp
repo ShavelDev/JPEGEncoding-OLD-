@@ -226,6 +226,7 @@ void joinTheLowest(vector<unique_ptr<node>>& nodes){
 
 struct code{
     bitset<8> huffmanSym;
+    bitset<8> codeInBits;
     string code;
     int branchDepth;
 };
@@ -243,11 +244,16 @@ void calculateCodes(vector<code>& codes, unique_ptr<node>& node, string code, in
     }
     
     if (node->left == nullptr && node->right == nullptr) {
-        codes.push_back({node->huffmanSymbol, code, branchNum});
+        codes.push_back({node->huffmanSymbol, bitset<8>(0),code, branchNum});
         cout << "Symbol: " << node->huffmanSymbol << " Code: " << code << " Occurances: " << node->freq << " Branch: "<< branchNum<< endl;
         
     }
     
+}
+
+bool compareByBranchDepth(const code& a, const code& b) {
+    return a.branchDepth < b.branchDepth;
+
 }
 
 
@@ -282,14 +288,34 @@ int main(int argc, const char * argv[]) {
     vector<code> codes;
     
     calculateCodes(codes, head, "", 0);
+    sort(codes.begin(), codes.end(), compareByBranchDepth);
     
     int codeLengthMap[16] = {};
     for (int i = 0; i < codes.size(); i++) {
         codeLengthMap[codes[i].branchDepth-1]++;
     }
     
+
+    
+    int currCode = 0;
+    short codeCandidate = 0;
+    
     for (int i = 0; i < 16; i++) {
-        cout << "Length: " << i+1 << " Num of codes: " << codeLengthMap[i] << endl;
+        
+        
+        
+        for (int j = 0; j < codeLengthMap[i]; j++) {
+            codes[currCode].codeInBits = bitset<8>(codeCandidate);
+            
+            cout << "Symbol: " << codes[currCode].huffmanSym << " code: " << codes[currCode].codeInBits << " code-length: "<< codes[currCode].branchDepth << endl;
+            codeCandidate++;
+            currCode++;
+            
+        }
+        
+        codeCandidate = codeCandidate << 1;
+        
+        //cout << "Length: " << i+1 << " Num of codes: " << codeLengthMap[i] << endl;
     }
     
   //cout << getImportantBits<numOfBits>(10).to_string() << endl;
