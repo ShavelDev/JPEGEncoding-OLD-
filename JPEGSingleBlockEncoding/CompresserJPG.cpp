@@ -9,6 +9,7 @@
 #include <vector>
 
 
+
 bool CompresserJPG::readFile(string imageName, vector<uint8_t>& pixelData){
     ifstream file(imageName, std::ios::binary);
     
@@ -98,7 +99,54 @@ void CompresserJPG::arraysToBlock(int width, int height, int8_t* array, vector<B
 
 }
 
-
+void performDCT(Block b){
+    
+    int DctCoeff[64];
+    
+    cout << "BEFORE: " << endl;
+    for (int y = 0; y < 8; y++) {
+        for (int x = 0; x < 8; x++) {
+            cout <<  (int) b.data[x + 8*y] << " " ;
+        }
+        cout << endl;
+    }
+    
+    
+    for (int yC = 0; yC < 8; yC++) {
+        for (int xC = 0; xC < 8; xC++) {
+            
+            float currCoeff  = 0;
+            
+            for (int y = 0; y < 8; y++) {
+                for (int x = 0; x < 8; x++) {
+                    float coeffX = (xC == 0) ? 0.707107 : 1;
+                    float coeffY = (yC == 0) ? 0.707107: 1;
+                    
+                    currCoeff += ((float)b.data[x + 8*y]) * coeffX*coeffY * cos((2*x+1)*xC*M_PI/16) * cos((2*y+1)*yC*M_PI/16)/4;
+                    
+                    
+                }
+            }
+            
+            DctCoeff[xC+8*yC] = (int)currCoeff;
+            
+        }
+        
+        
+        
+        
+        
+    }
+    
+    cout << "After: " << endl;
+    for (int y = 0; y < 8; y++) {
+        for (int x = 0; x < 8; x++) {
+            cout <<  (int) DctCoeff[x + 8*y] << " " ;
+        }
+        cout << endl;
+    }
+    
+}
 CompresserJPG::CompresserJPG(string imageName){
     vector<uint8_t> pixelData;
     
@@ -140,4 +188,20 @@ CompresserJPG::CompresserJPG(string imageName){
     arraysToBlock(imageWidth, imageHeight, arrY, blocksY);
     arraysToBlock(imageWidth, imageHeight, arrCb, blocksCb);
     arraysToBlock(imageWidth, imageHeight, arrCr, blocksCr);
+    
+    
+    //Block test = {{-76, -73, -67, -62, -58, -67, -64, -55, -65, -69, -73, -38, -19, -43, -59, -56, -66, -69, -60, -15, 16, -24, -62, -55, -65, -70, -57, -6, 26, -22, -58, -59, -61, -67, -60, -24, -2, -40, -60, -58, -49, -63, -68, -58, -51, -60, -70, -53, -43, -57, -64, -69, -73, -67, -63, -45, -41, -49, -59, -60, -63, -52, -50, -34}};
+    
+    Block test = {{
+        -66, -73, -73, -74, -79, -80, -81, -73,
+        -66, -71, -74, -76, -80, -81, -80, -75,
+        -67, -68, -76, -79, -80, -81, -79, -74,
+        -65, -67, -68, -68, -65, -63, -60, -63,
+        -61, -61, -58, -54, -49, -43, -37, -36,
+        -46, -33, -27, -22, -14, -13, -16, -11,
+        -32, -17, -13, -9, 0, 0, 2, -1,
+        -19, -7, -1, 5, 11, 13, 12, 5
+    }};
+    performDCT(test);
+    
 }

@@ -66,6 +66,10 @@ private:
     vector<Block> blocksCb;
     vector<Block> blocksCr;
     
+    vector<Block> blocksYDCT;
+    vector<Block> blocksCbDCT;
+    vector<Block> blocksCrDCT;
+    
     
     const int zigzagMap[64] = {
         //map here
@@ -73,6 +77,8 @@ private:
     
     vector<code> codesAC;
     vector<code> codesDC;
+    
+    
     
     
     
