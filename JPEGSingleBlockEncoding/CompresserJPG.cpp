@@ -99,9 +99,14 @@ void CompresserJPG::arraysToBlock(int width, int height, int8_t* array, vector<B
 
 }
 
-void performDCT(Block b){
+void CompresserJPG::performDCT(Block b, int quantTable[64]){
     
     int DctCoeff[64];
+    
+    for (int i = 0; i < 64; ++i) {
+            DctCoeff[i] = static_cast<int>(b.data[i]);
+       }
+    
     
     cout << "BEFORE: " << endl;
     for (int y = 0; y < 8; y++) {
@@ -122,31 +127,29 @@ void performDCT(Block b){
                     float coeffX = (xC == 0) ? 0.707107 : 1;
                     float coeffY = (yC == 0) ? 0.707107: 1;
                     
-                    currCoeff += ((float)b.data[x + 8*y]) * coeffX*coeffY * cos((2*x+1)*xC*M_PI/16) * cos((2*y+1)*yC*M_PI/16)/4;
+                    currCoeff += ((float)DctCoeff[x + 8*y]) * coeffX*coeffY * cos((2*x+1)*xC*M_PI/16) * cos((2*y+1)*yC*M_PI/16)/4;
                     
                     
                 }
             }
             
-            DctCoeff[xC+8*yC] = (int)currCoeff;
+            b.data[xC+8*yC] = static_cast<int>(std::round(currCoeff/(float)quantTable[xC+8*yC])); //(int)(currCoeff/(float)quantTable[xC+8*yC]);
             
         }
-        
-        
-        
-        
         
     }
     
     cout << "After: " << endl;
     for (int y = 0; y < 8; y++) {
         for (int x = 0; x < 8; x++) {
-            cout <<  (int) DctCoeff[x + 8*y] << " " ;
+            cout <<  (int) b.data[x + 8*y] << " " ;
         }
         cout << endl;
     }
     
 }
+
+
 CompresserJPG::CompresserJPG(string imageName){
     vector<uint8_t> pixelData;
     
@@ -202,6 +205,6 @@ CompresserJPG::CompresserJPG(string imageName){
         -32, -17, -13, -9, 0, 0, 2, -1,
         -19, -7, -1, 5, 11, 13, 12, 5
     }};
-    performDCT(test);
+    performDCT(test, quantTableY);
     
 }
