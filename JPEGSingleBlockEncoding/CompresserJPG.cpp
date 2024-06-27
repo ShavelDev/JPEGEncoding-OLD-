@@ -41,6 +41,8 @@ string CompresserJPG::intToBItstring(int num){
     
 }*/
 
+
+
 bitset<8> CompresserJPG::getHuffmanSymbol(int zerosCount, int numOfBits){
     bitset<4> zeros(zerosCount);
     bitset<4> length(numOfBits);
@@ -61,18 +63,20 @@ bitset<8> CompresserJPG::getHuffmanSymbol(int zerosCount, int numOfBits){
     return result;
 }
 
-void CompresserJPG::createCodesAC(vector<Block> component, vector<code> codes){
-    vector<unique_ptr<node>> nodes;
-    createComponentTree(component, nodes);
+
+
+void CompresserJPG::createCodesDC(vector<Block> component, vector<codeDC>& codes){
+    vector<unique_ptr<nodeDC>> nodes;
+    createComponentTreeDC(component, nodes);
     
     while (nodes.size() != 1) {
-        joinTheLowest(nodes);
+        joinTheLowestDC(nodes);
     }
     
-    unique_ptr<node> head = std::move(nodes[0]);
+    unique_ptr<nodeDC> head = std::move(nodes[0]);
     
-    calculateCodes(codes, head, 0);
-    sort(codes.begin(), codes.end(), compareByBranchDepth);
+    calculateCodesDC(codes, head, 0);
+    sort(codes.begin(), codes.end(), compareByBranchDepthDC);
     
     int codeLengthMap[16] = {};
     for (int i= 0; i < codes.size(); i++) {
@@ -87,9 +91,9 @@ void CompresserJPG::createCodesAC(vector<Block> component, vector<code> codes){
         
         
         for (int j = 0; j < codeLengthMap[i]; j++) {
-            codes[currCode].codeInBits = bitset<8>(codeCandidate);
+            codes[currCode].codeInBits = bitset<16>(codeCandidate);
             
-            cout << "Symbol: " << codes[currCode].huffmanSym << " code: " << codes[currCode].codeInBits.to_string().substr(8-codes[currCode].branchDepth) << " code-length: "<< codes[currCode].branchDepth << endl;
+            cout << "Val: " << codes[currCode].val << " code: " << codes[currCode].codeInBits.to_string().substr(16-codes[currCode].branchDepth) << " code-length: "<< codes[currCode].branchDepth << endl;
             codeCandidate++;
             currCode++;
             
@@ -104,7 +108,53 @@ void CompresserJPG::createCodesAC(vector<Block> component, vector<code> codes){
     
     
 }
-void CompresserJPG::createComponentTree(vector<Block>& component, vector<unique_ptr<node>>& nodes){
+
+
+
+void CompresserJPG::createCodesAC(vector<Block> component, vector<codeAC>& codes){
+    vector<unique_ptr<nodeAC>> nodes;
+    createComponentTreeAC(component, nodes);
+    
+    while (nodes.size() != 1) {
+        joinTheLowestAC(nodes);
+    }
+    
+    unique_ptr<nodeAC> head = std::move(nodes[0]);
+    
+    calculateCodesAC(codes, head, 0);
+    sort(codes.begin(), codes.end(), compareByBranchDepthAC);
+    
+    int codeLengthMap[16] = {};
+    for (int i= 0; i < codes.size(); i++) {
+        codeLengthMap[codes[i].branchDepth-1]++;
+    }
+    
+    int currCode = 0;
+    short codeCandidate = 0;
+    
+    for (int i = 0; i < 16; i++) {
+        
+        
+        
+        for (int j = 0; j < codeLengthMap[i]; j++) {
+            codes[currCode].codeInBits = bitset<16>(codeCandidate);
+            
+            cout << "Symbol: " << codes[currCode].huffmanSym << " code: " << codes[currCode].codeInBits.to_string().substr(16-codes[currCode].branchDepth) << " code-length: "<< codes[currCode].branchDepth << endl;
+            codeCandidate++;
+            currCode++;
+            
+        }
+        
+        codeCandidate = codeCandidate << 1;
+        
+        //cout << "Length: " << i+1 << " Num of codes: " << codeLengthMap[i] << endl;
+    }
+
+    
+    
+    
+}
+void CompresserJPG::createComponentTreeAC(vector<Block>& component, vector<unique_ptr<nodeAC>>& nodes){
     
     
     for (int k = 0; k < component.size(); k++) {
@@ -136,7 +186,7 @@ void CompresserJPG::createComponentTree(vector<Block>& component, vector<unique_
                     }
                 }
                 if (!symInNodes) {
-                    nodes.push_back(std::make_unique<node>(1, currSymbol));
+                    nodes.push_back(std::make_unique<nodeAC>(1, currSymbol));
                 }
                 
                 
@@ -149,11 +199,34 @@ void CompresserJPG::createComponentTree(vector<Block>& component, vector<unique_
     
 }
 
-string CompresserJPG::intToBitstring(int8_t num){
+void CompresserJPG::createComponentTreeDC(vector<Block>& component, vector<unique_ptr<nodeDC>>& nodes){
+    
+    int currCoeff = component[0].data[0];
+    nodes.push_back(std::make_unique<nodeDC>(1,currCoeff));
+    
+    for (int i = 1; i < component.size(); i++) {
+        currCoeff = component[i-1].data[0] - component[i].data[0];
+        bool valInNodes = false;
+        for (int j = 0; j < nodes.size(); j++) {
+            if (nodes[j]->val == currCoeff) {
+                nodes[j]->freq += 1;
+                valInNodes = true;
+                break;
+            }
+        }
+        if (!valInNodes) {
+            nodes.push_back(std::make_unique<nodeDC>(1,currCoeff));
+        }
+    }
+    
+}
+
+string CompresserJPG::intToBitstring(int num){
     return "";
 }
 
-void CompresserJPG::joinTheLowest(vector<unique_ptr<node>>& nodes){
+
+void CompresserJPG::joinTheLowestAC(vector<unique_ptr<nodeAC>>& nodes){
     int lowestInd = -1;
     int secondLow = -1;
     int minVal = INT_MAX;
@@ -174,7 +247,7 @@ void CompresserJPG::joinTheLowest(vector<unique_ptr<node>>& nodes){
     
     int firstIndex = lowestInd < secondLow ? lowestInd : secondLow;
     int secondIndex = lowestInd > secondLow ? lowestInd : secondLow;
-    unique_ptr<node> newNode = make_unique<node>((nodes[lowestInd]->freq + nodes[secondLow]->freq), bitset<8>(0));
+    unique_ptr<nodeAC> newNode = make_unique<nodeAC>((nodes[lowestInd]->freq + nodes[secondLow]->freq), bitset<8>(0));
     newNode->left = std::move(nodes[secondLow]);
     newNode->right = std::move(nodes[lowestInd]);
     nodes.push_back(std::move(newNode));
@@ -182,23 +255,77 @@ void CompresserJPG::joinTheLowest(vector<unique_ptr<node>>& nodes){
     nodes.erase(nodes.begin() + secondIndex);
     nodes.erase(nodes.begin() + firstIndex);
 }
-void CompresserJPG::calculateCodes(vector<code>& codes, unique_ptr<node>& node, int branchNum){
+
+void CompresserJPG::joinTheLowestDC(vector<unique_ptr<nodeDC>>& nodes){
+    int lowestInd = -1;
+    int secondLow = -1;
+    int minVal = INT_MAX;
+    int secondMinVal = INT_MAX;
+    
+    for (int i = 0; i < nodes.size(); i++) {
+        if (nodes[i]->freq < minVal) {
+            secondLow = lowestInd;
+            secondMinVal = minVal;
+            lowestInd = i;
+            minVal = nodes[i]->freq;
+        } else if (nodes[i]->freq < secondMinVal) {
+            secondLow = i;
+            secondMinVal = nodes[i]->freq;
+        }
+    }
+    
+    
+    int firstIndex = lowestInd < secondLow ? lowestInd : secondLow;
+    int secondIndex = lowestInd > secondLow ? lowestInd : secondLow;
+    unique_ptr<nodeDC> newNode = make_unique<nodeDC>((nodes[lowestInd]->freq + nodes[secondLow]->freq), 0);
+    newNode->left = std::move(nodes[secondLow]);
+    newNode->right = std::move(nodes[lowestInd]);
+    nodes.push_back(std::move(newNode));
+    
+    nodes.erase(nodes.begin() + secondIndex);
+    nodes.erase(nodes.begin() + firstIndex);
+}
+
+void CompresserJPG::calculateCodesDC(vector<codeDC>& codes, unique_ptr<nodeDC>& node, int branchNum){
     if (node->left != nullptr) {
-        calculateCodes(codes, node->left, branchNum + 1);
+        calculateCodesDC(codes, node->left, branchNum + 1);
     }
     
     if (node->right != nullptr) {
-        calculateCodes(codes, node->right, branchNum + 1);
+        calculateCodesDC(codes, node->right, branchNum + 1);
     }
     
     if (node->left == nullptr && node->right == nullptr) {
-        codes.push_back({node->huffmanSymbol, bitset<8>(0), branchNum});
+        codes.push_back({node->val, bitset<16>(0), branchNum});
+        cout << "Val: " << node->val << " Occurances: " << node->freq << " Branch: "<< branchNum<< endl;
+        
+    }
+    
+}
+
+
+
+void CompresserJPG::calculateCodesAC(vector<codeAC>& codes, unique_ptr<nodeAC>& node, int branchNum){
+    if (node->left != nullptr) {
+        calculateCodesAC(codes, node->left, branchNum + 1);
+    }
+    
+    if (node->right != nullptr) {
+        calculateCodesAC(codes, node->right, branchNum + 1);
+    }
+    
+    if (node->left == nullptr && node->right == nullptr) {
+        codes.push_back({node->huffmanSymbol, bitset<16>(0), branchNum});
         cout << "Symbol: " << node->huffmanSymbol  << " Occurances: " << node->freq << " Branch: "<< branchNum<< endl;
         
     }
     
 }
-bool CompresserJPG::compareByBranchDepth(const code& a, const code& b){
+bool CompresserJPG::compareByBranchDepthAC(const codeAC& a, const codeAC& b){
+    return a.branchDepth < b.branchDepth;
+}
+
+bool CompresserJPG::compareByBranchDepthDC(const codeDC& a, const codeDC& b){
     return a.branchDepth < b.branchDepth;
 }
 
@@ -402,9 +529,42 @@ CompresserJPG::CompresserJPG(string imageName){
     }};
     performDCT(test, quantTableY);
     */
+    
+    
+    
+    
+    
     for (int i = 0; i < blocksY.size(); i++) {
         performDCT(blocksY[i], quantTableY);
     }
     
     createCodesAC(blocksY, codesAC);
+    
+    cout << "AC CODES" << endl<< endl;
+    for (int i = 0; i < codesAC.size(); i++) {
+        
+        cout << "Huffman symbol: " << codesAC[i].huffmanSym.to_string()<< endl;
+        cout << "Code: " << codesAC[i].codeInBits.to_string().substr(16 - codesAC[i].branchDepth)<< endl << endl;
+    }
+    
+    createCodesDC(blocksY, codesDC);
+    
+    
+    
+    cout << "DC Coeff:" << endl << endl;
+    for (int i = 0; i < blocksY.size(); i++) {
+        
+        cout << "Val: " << (int) blocksY[i].data[0]<< endl;
+
+    }
+    cout << "DC CODES" << endl<< endl;
+    for (int i = 0; i < codesDC.size(); i++) {
+        
+        cout << "Val: " << codesDC[i].val<< endl;
+        cout << "Code: " << codesDC[i].codeInBits.to_string().substr(16 - codesDC[i].branchDepth)<< endl << endl;
+    }
+    
+    //turncodes into writeable table
+    
+    //
 }

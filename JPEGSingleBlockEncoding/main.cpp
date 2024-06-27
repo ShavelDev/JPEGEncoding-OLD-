@@ -145,6 +145,7 @@ struct node{
 };*/
 
 //encodes the block but without the huffman
+/*
 void encodeBlockNoHuffman(int8_t block[64], vector<unique_ptr<node>>& huffmanSymbols){
     
     cout << "DCT: " << block[0] << endl;
@@ -188,9 +189,9 @@ void encodeBlockNoHuffman(int8_t block[64], vector<unique_ptr<node>>& huffmanSym
 void findCodes(){
     
 }
+*/
 
-
-
+/*
 void joinTheLowest(vector<unique_ptr<node>>& nodes){
     
     
@@ -224,7 +225,7 @@ void joinTheLowest(vector<unique_ptr<node>>& nodes){
     
     
 }
-
+*/
 /*
 struct code{
     bitset<8> huffmanSym;
@@ -256,7 +257,7 @@ void calculateCodes(vector<code>& codes, unique_ptr<node>& node, string code, in
     
 }
 */
-bool compareByBranchDepth(const code& a, const code& b) {
+bool compareByBranchDepth(const codeAC& a, const codeAC& b) {
     return a.branchDepth < b.branchDepth;
 
 }

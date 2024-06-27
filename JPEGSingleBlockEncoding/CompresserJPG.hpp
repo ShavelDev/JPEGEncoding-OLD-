@@ -14,20 +14,36 @@
 
 using namespace std;
 
-struct code{
-    bitset<8> huffmanSym;
-    bitset<8> codeInBits;
+struct codeDC{
+    int val;
+    bitset<16> codeInBits;
     int branchDepth;
 };
 
-struct node{
+struct codeAC{
+    bitset<8> huffmanSym;
+    bitset<16> codeInBits;
+    int branchDepth;
+};
+
+struct nodeAC{
     int freq;
     const bitset<8> huffmanSymbol;
-    unique_ptr<node>  left = nullptr;
-    unique_ptr<node> right = nullptr;
+    unique_ptr<nodeAC>  left = nullptr;
+    unique_ptr<nodeAC> right = nullptr;
     
-    node(int f, const bitset<8>& symbol)
+    nodeAC(int f, const bitset<8>& symbol)
             : freq(f), huffmanSymbol(symbol) {}
+};
+
+struct nodeDC{
+    int freq;
+    const int val;
+    unique_ptr<nodeDC>  left = nullptr;
+    unique_ptr<nodeDC> right = nullptr;
+    
+    nodeDC(int f, int v)
+            : freq(f), val(v) {}
 };
 
 struct Block {
@@ -43,16 +59,22 @@ private:
     
     void readBlock(int8_t block[64]);
     int getNumOfBits(int num);
-    string intToBitstring(int8_t num);
+    string intToBitstring(int num);
     bitset<8> getHuffmanSymbol(int zerosCount, int numOfBits);
-    void createCodesAC(vector<Block> component, vector<code> codes);
-    void createComponentTree(vector<Block>& component, vector<unique_ptr<node>>& huffmanSymbols);
-    void joinTheLowest(vector<unique_ptr<node>>& nodes);
-    void calculateCodes(vector<code>& codes, unique_ptr<node>& node, int branchNum);
-    static bool compareByBranchDepth(const code& a, const code& b);
+    void createCodesAC(vector<Block> component, vector<codeAC>& codes);
+    void createComponentTreeAC(vector<Block>& component, vector<unique_ptr<nodeAC>>& huffmanSymbols);
+    void createComponentTreeDC(vector<Block>& component, vector<unique_ptr<nodeDC>>& huffmanSymbols);
     
+    void joinTheLowestAC(vector<unique_ptr<nodeAC>>& nodes);
+    void joinTheLowestDC(vector<unique_ptr<nodeDC>>& nodes);
     
+    void calculateCodesAC(vector<codeAC>& codes, unique_ptr<nodeAC>& node, int branchNum);
+    static bool compareByBranchDepthAC(const codeAC& a, const codeAC& b);
     
+    static bool compareByBranchDepthDC(const codeDC& a, const codeDC& b);
+    bitset<16> getCodeBySymbol();
+    void createCodesDC(vector<Block> component, vector<codeDC>& codes);
+    void calculateCodesDC(vector<codeDC>& codes, unique_ptr<nodeDC>& node, int branchNum);
     
     
     bool readFile(string imageName, vector<uint8_t>& pixelData);
@@ -101,8 +123,8 @@ private:
         72, 92, 95, 98, 112, 100, 103, 99
     };
     */
-    vector<code> codesAC;
-    vector<code> codesDC;
+    vector<codeAC> codesAC;
+    vector<codeDC> codesDC;
     
     int zigzagMap[64] = {0, 1, 8, 16, 9, 2, 3, 10,
         17, 24, 32, 25, 18, 11, 4, 5,
