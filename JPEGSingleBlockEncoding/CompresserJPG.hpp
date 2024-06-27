@@ -17,7 +17,6 @@ using namespace std;
 struct code{
     bitset<8> huffmanSym;
     bitset<8> codeInBits;
-    string code;
     int branchDepth;
 };
 
@@ -43,19 +42,24 @@ private:
     
     
     void readBlock(int8_t block[64]);
-    int getNumOfBits(int8_t num);
+    int getNumOfBits(int num);
     string intToBitstring(int8_t num);
     bitset<8> getHuffmanSymbol(int zerosCount, int numOfBits);
-    void encodeBlockNoHuffman(int8_t block[64], vector<unique_ptr<node>>& huffmanSymbols);
+    void createCodesAC(vector<Block> component, vector<code> codes);
+    void createComponentTree(vector<Block>& component, vector<unique_ptr<node>>& huffmanSymbols);
     void joinTheLowest(vector<unique_ptr<node>>& nodes);
-    void calculateCodes(vector<code>& codes, unique_ptr<node>& node, string code, int branchNum);
-    bool compareByBranchDepth(const code& a, const code& b);
+    void calculateCodes(vector<code>& codes, unique_ptr<node>& node, int branchNum);
+    static bool compareByBranchDepth(const code& a, const code& b);
+    
+    
+    
+    
     
     bool readFile(string imageName, vector<uint8_t>& pixelData);
     
     void arraysToBlock(int width, int height,int8_t* array, vector<Block>& blockStorage);
     
-    void performDCT(Block b, int quantTable[64]);
+    void performDCT(Block& b, int quantTable[64]);
     
     int imageWidth;
     int imageHeight;
@@ -73,9 +77,6 @@ private:
     vector<Block> blocksCrDCT;
     
     
-    const int zigzagMap[64] = {
-        //map here
-    };
     
     int quantTableY[64] = 
     {16,12,14,14,18,24,49,72,
@@ -103,6 +104,15 @@ private:
     vector<code> codesAC;
     vector<code> codesDC;
     
+    int zigzagMap[64] = {0, 1, 8, 16, 9, 2, 3, 10,
+        17, 24, 32, 25, 18, 11, 4, 5,
+        12, 19, 26, 33, 40, 48, 41, 34,
+        27, 20, 13, 6, 7, 14, 21, 28,
+        35, 42, 49, 56, 57, 50, 43, 36,
+        29, 22, 15, 23, 30, 37, 44, 51,
+        58, 59, 52, 45, 38, 31, 39, 46,
+        53, 60, 61, 54, 47, 55, 62, 63
+    };
     
     
     

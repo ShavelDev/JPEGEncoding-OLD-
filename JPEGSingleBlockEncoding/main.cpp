@@ -233,6 +233,9 @@ struct code{
     int branchDepth;
 };
 */
+
+//struct code is outdated below
+/*
 void calculateCodes(vector<code>& codes, unique_ptr<node>& node, string code, int branchNum){
     
     if (node->left != nullptr) {
@@ -252,7 +255,7 @@ void calculateCodes(vector<code>& codes, unique_ptr<node>& node, string code, in
     }
     
 }
-
+*/
 bool compareByBranchDepth(const code& a, const code& b) {
     return a.branchDepth < b.branchDepth;
 
@@ -261,9 +264,9 @@ bool compareByBranchDepth(const code& a, const code& b) {
 
 
 int main(int argc, const char * argv[]) {
+    
+    
     /*
-    
-    
     //8 by 8 qunatisized DCT pixel block written in zigzag order
     int8_t testedBlock[64] = {52, 0, -6, 0, 3, 0, 0, 0,
                             4, -2, 1, 0, -1, 0, -6, 0,
@@ -278,7 +281,7 @@ int main(int argc, const char * argv[]) {
     
     
     
-    readBlock(testedBlock);
+    //readBlock(testedBlock);
     
     vector<unique_ptr<node>> nodes;
     encodeBlockNoHuffman(testedBlock, nodes);
