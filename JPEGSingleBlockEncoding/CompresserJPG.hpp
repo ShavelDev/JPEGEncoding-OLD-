@@ -57,13 +57,24 @@ struct Block {
 class CompresserJPG{
     
 private:
+    
+    
+    void writeComponents(ofstream& file, vector<bool> data);
+    
+    void writeToFile(vector<bool> data );
 
     
     vector<bool> getCodeBySymbol(bitset<8> symbol);
     vector<bool> getCodeByVal(int val);
+    
+    //returns the number as bits ex: 10 => 1010, -10 => 0101
     vector<bool> getBitsOfVal(int val);
     
+    vector<bool> blockToBits(int8_t prevDC,Block b);
+    
     void readBlock(int8_t block[64]);
+    
+    //returns the number as bits ex: 10 => 4, -10 => 4
     int getNumOfBits(int num);
     string intToBitstring(int num);
     bitset<8> getHuffmanSymbol(int zerosCount, int numOfBits);
@@ -87,7 +98,7 @@ private:
     
     void arraysToBlock(int width, int height,int8_t* array, vector<Block>& blockStorage);
     
-    void performDCT(Block& b, int quantTable[64]);
+    void performDCT(Block& b, uint8_t quantTable[64]);
     
     int imageWidth;
     int imageHeight;
@@ -106,7 +117,7 @@ private:
     
     
     
-    int quantTableY[64] = 
+    uint8_t quantTableY[64] =
     {16,12,14,14,18,24,49,72,
         11,12,13,17,22,35,64,92,
         10,14,16,22,37,55,78,95,

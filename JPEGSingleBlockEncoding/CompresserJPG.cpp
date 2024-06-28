@@ -158,6 +158,9 @@ void CompresserJPG::createCodesAC(vector<Block> component, vector<codeAC>& codes
 }
 void CompresserJPG::createComponentTreeAC(vector<Block>& component, vector<unique_ptr<nodeAC>>& nodes){
     
+    //add EOB because there will always be at least one
+    nodes.push_back(std::make_unique<nodeAC>(component.size(), bitset<8>(0)));
+    
     
     for (int k = 0; k < component.size(); k++) {
         
@@ -197,6 +200,7 @@ void CompresserJPG::createComponentTreeAC(vector<Block>& component, vector<uniqu
             }
             
         }
+        
     }
     
 }
@@ -204,20 +208,20 @@ void CompresserJPG::createComponentTreeAC(vector<Block>& component, vector<uniqu
 void CompresserJPG::createComponentTreeDC(vector<Block>& component, vector<unique_ptr<nodeDC>>& nodes){
     
     int currCoeff = component[0].data[0];
-    nodes.push_back(std::make_unique<nodeDC>(1,currCoeff));
+    nodes.push_back(std::make_unique<nodeDC>(1, getNumOfBits(currCoeff)));
     
     for (int i = 1; i < component.size(); i++) {
-        currCoeff = component[i-1].data[0] - component[i].data[0];
+        currCoeff = component[i].data[0] - component[i-1].data[0];
         bool valInNodes = false;
         for (int j = 0; j < nodes.size(); j++) {
-            if (nodes[j]->val == currCoeff) {
+            if (nodes[j]->val == getNumOfBits(currCoeff)) {
                 nodes[j]->freq += 1;
                 valInNodes = true;
                 break;
             }
         }
         if (!valInNodes) {
-            nodes.push_back(std::make_unique<nodeDC>(1,currCoeff));
+            nodes.push_back(std::make_unique<nodeDC>(1,getNumOfBits(currCoeff)));
         }
     }
     
@@ -422,7 +426,7 @@ void CompresserJPG::arraysToBlock(int width, int height, int8_t* array, vector<B
 
 }
 
-void CompresserJPG::performDCT(Block& b, int quantTable[64]){
+void CompresserJPG::performDCT(Block& b, uint8_t quantTable[64]){
     
     int DctCoeff[64];
     
@@ -578,11 +582,20 @@ CompresserJPG::CompresserJPG(string imageName){
     cout << endl;
     
     cout<< "getCodeByVal: "  << endl;
-    test = getCodeByVal(-14);
+    test = getCodeByVal(2);
     for (int i = 0; i < test.size(); i++) {
         cout << test[i];
     }
     cout << endl;
+    
+    vector<bool> data;
+    for (int i = 0; i < blocksY.size(); i++) {
+        int prevDC = i == 0 ? 0 : blocksY[i-1].data[0];
+        vector<bool> blockData = blockToBits(prevDC, blocksY[i]);
+        data.insert(data.begin(), blockData.begin(), blockData.end());
+    }
+    
+    writeToFile(data);
     
 }
 
@@ -614,6 +627,7 @@ vector<bool> CompresserJPG::getCodeByVal( int val){
         }
     }
     
+    cout << "value: " << val << endl;
     assert(false);
     
 }
@@ -638,3 +652,181 @@ vector<bool> CompresserJPG::getBitsOfVal(int val){
     assert(false);
 }
 
+vector<bool> CompresserJPG::blockToBits(int8_t prevDC, Block b){
+    vector<bool> bits;
+    vector<bool> codeDC = getCodeByVal(getNumOfBits((int)b.data[0]-(int)prevDC));
+    vector<bool> coeffDC = getBitsOfVal((int)b.data[0]-(int)prevDC);
+    codeDC.insert(codeDC.begin(), coeffDC.begin(),coeffDC.end());
+    bits.insert(bits.begin(), codeDC.begin(), codeDC.end());
+    
+    
+    int zeroCounter = 0;
+    for (int i = 1; i < 64; i++) {
+        
+        //USE ZIGZAG HERE zigzag[i]
+        int currVal = b.data[zigzagMap[i]];
+
+        if (currVal == 0) {
+            zeroCounter++;
+            continue;
+            
+        }
+        else{
+            
+            bitset<8> currSymbol = getHuffmanSymbol(zeroCounter, getNumOfBits(currVal));
+            
+            vector<bool> bitsSymbol = getCodeBySymbol(currSymbol);
+            
+            bits.insert(bits.begin(), bitsSymbol.begin(), bitsSymbol.end());
+            
+            
+            zeroCounter = 0;
+        }
+        
+    }
+    
+    
+    
+    
+    //EOB
+    vector<bool> bitsEOB = getCodeBySymbol(bitset<8>(0));
+    
+    bits.insert(bits.begin(), bitsEOB.begin(), bitsEOB.end());
+    
+    return bits;
+}
+
+void write16(std::ofstream& file, uint16_t value) {
+    file.put(static_cast<char>((value >> 8) & 0xFF));
+    file.put(static_cast<char>(value & 0xFF));
+}
+
+// Function to write an 8-bit value
+void write8(std::ofstream& file, uint8_t value) {
+    file.put(static_cast<char>(value));
+}
+
+void CompresserJPG::writeToFile(vector<bool> data){
+    std::ofstream jpegFile("output.jpg", std::ios::binary);
+    
+    if (!jpegFile) {
+        std::cerr << "Could not open the file for writing." << std::endl;
+        assert(false);
+        
+    }
+    
+    // JPEG SOI marker (Start of Image)
+    write16(jpegFile, 0xFFD8);
+    
+    // APP0 marker (JFIF header)
+    write16(jpegFile, 0xFFE0); // Marker
+    write16(jpegFile, 16);     // Length
+    jpegFile.write("JFIF", 5); // Identifier
+    write8(jpegFile, 1);       // Version major
+    write8(jpegFile, 1);       // Version minor
+    write8(jpegFile, 0);       // Units (0 = no units, aspect ratio only)
+    write16(jpegFile, 1);      // X density
+    write16(jpegFile, 1);      // Y density
+    write8(jpegFile, 0);       // X thumbnail
+    write8(jpegFile, 0);       // Y thumbnail
+    
+    // DQT marker (Define Quantization Table)
+    write16(jpegFile, 0xFFDB); // Marker
+    write16(jpegFile, 67);     // Length
+    write8(jpegFile, 0);       // QT information (table 0, precision 8-bit)
+    
+    
+    jpegFile.write(reinterpret_cast<const char*>(quantTableY), 64);
+    
+    // SOF0 marker (Start of Frame, Baseline DCT)
+    write16(jpegFile, 0xFFC0); // Marker
+    write16(jpegFile, 17);     // Length
+    write8(jpegFile, 8);       // Precision (8 bits)
+    write16(jpegFile, 16);     // Image height
+    write16(jpegFile, 16);     // Image width
+    write8(jpegFile, 1);       // Number of components (1 for grayscale)
+    write8(jpegFile, 1);       // Component ID (1)
+    write8(jpegFile, 0x11);    // Sampling factors (HxV, 1x1)
+    write8(jpegFile, 0);       // Quantization table number
+    
+    // DHT marker (Define Huffman Table)
+    write16(jpegFile, 0xFFC4); // Marker
+    write16(jpegFile, 34+2+codesAC.size()+codesDC.size()); // Length
+    // DC Huffman Table
+    write8(jpegFile, 0x00);    // HT information (DC table 0)
+    // Number of codes for each length (example values)
+    
+    uint8_t codesLengthMapDC[16] = {};
+    for (int i = 0; i < codesDC.size(); i++) {
+        codesLengthMapDC[codesDC[i].branchDepth-1]++;
+    }
+    
+    
+    jpegFile.write(reinterpret_cast<const char*>(codesLengthMapDC), 16);
+    // Values for each code (example values)
+    const int sizeDC = (const int)codesDC.size();
+    uint8_t dcValues[sizeDC];
+    for (int i = 0; i < sizeDC; i++) {
+        dcValues[i] = codesDC[i].val;
+    }
+    jpegFile.write(reinterpret_cast<const char*>(dcValues), sizeDC);
+    
+    // AC Huffman Table
+    write8(jpegFile, 0x10);    // HT information (AC table 0)
+    // Number of codes for each length (example values)
+    
+    uint8_t codesLengthMapAC[16] = {};
+    for (int i = 0; i < codesAC.size(); i++) {
+        codesLengthMapAC[codesAC[i].branchDepth-1]++;
+    }
+    
+    
+    jpegFile.write(reinterpret_cast<const char*>(codesLengthMapAC), 16);
+    // Values for each code example values)
+    const int sizeAC = (const int)codesAC.size();
+    uint8_t acValues[sizeAC];
+    for (int i = 0; i < sizeAC; i++) {
+        acValues[i] = (uint8_t)codesAC[i].huffmanSym.to_ulong();
+    }
+    jpegFile.write(reinterpret_cast<const char*>(acValues), sizeAC);
+    
+    // SOS marker (Start of Scan)
+    write16(jpegFile, 0xFFDA); // Marker
+    write16(jpegFile, 12);     // Length
+    write8(jpegFile, 1);       // Number of components (1 for grayscale)
+    write8(jpegFile, 1);       // Component ID
+    write8(jpegFile, 0);       // DC/AC Huffman table number
+    write8(jpegFile, 0);       // Start of spectral selection
+    write8(jpegFile, 63);      // End of spectral selection
+    write8(jpegFile, 0);       // Successive approximation
+    
+    writeComponents(jpegFile, data);
+    
+    
+    // EOI marker (End of Image)
+    write16(jpegFile, 0xFFD9);
+    
+    jpegFile.close();
+    std::cout << "JPEG header file created successfully." << std::endl;
+}
+
+
+void CompresserJPG::writeComponents(ofstream &file, vector<bool> data){
+    bitset<8> buffer(0);
+    int i;
+    for (i = 0; i < data.size(); i++) {
+        buffer[7-i%8] = data[i];
+        
+        if (i != 0 && i % 8 == 0) {
+            file.put(static_cast<char>((uint8_t)buffer.to_ulong()));
+        }
+    }
+    
+    if (i % 8 != 0) {
+        int bitsLeft = 8 - (i%8);
+        for (int i = 0; i < bitsLeft; i++) {
+            buffer[i] = 0;
+        }
+        file.put(static_cast<char>((uint8_t)buffer.to_ulong()));
+    }
+}
