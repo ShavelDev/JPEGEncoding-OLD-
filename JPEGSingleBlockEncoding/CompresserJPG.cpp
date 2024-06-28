@@ -9,6 +9,8 @@
 #include <vector>
 
 //use only for num > abs
+
+
 int CompresserJPG::getNumOfBits(int num){
     
     num = abs(num);
@@ -567,4 +569,72 @@ CompresserJPG::CompresserJPG(string imageName){
     //turncodes into writeable table
     
     //
+    
+    cout << "getBitsOfNum: " << endl;
+    vector<bool> test = getBitsOfVal(-255);
+    for (int i = 0; i < test.size(); i++) {
+        cout << test[i];
+    }
+    cout << endl;
+    
+    cout<< "getCodeByVal: "  << endl;
+    test = getCodeByVal(-14);
+    for (int i = 0; i < test.size(); i++) {
+        cout << test[i];
+    }
+    cout << endl;
+    
 }
+
+vector<bool> CompresserJPG::getCodeBySymbol( bitset<8> symbol){
+    
+    for (int i = 0; i < codesAC.size(); i++) {
+        if (codesAC[i].huffmanSym == symbol) {
+            vector<bool> res;
+            for (int j = codesAC[i].branchDepth-1; j >=0; j--) {
+                res.push_back(codesAC[i].codeInBits[j]);
+            }
+            return res;
+        }
+    }
+    
+    assert(false);
+    
+}
+
+vector<bool> CompresserJPG::getCodeByVal( int val){
+    
+    for (int i = 0; i < codesDC.size(); i++) {
+        if (codesDC[i].val == val) {
+            vector<bool> res;
+            for (int j = codesDC[i].branchDepth-1; j >=0; j--) {
+                res.push_back(codesDC[i].codeInBits[j]);
+            }
+            return res;
+        }
+    }
+    
+    assert(false);
+    
+}
+
+vector<bool> CompresserJPG::getBitsOfVal(int val){
+    
+    bitset<32> bits(abs(val));
+    for (int i = 31; i >= 0 ; i--) {
+        if (bits[i] != 0) {
+            vector<bool> res;
+            for (int j = i; j >= 0 ; j--) {
+                bool bit = val > 0 ? bits[j] : !bits[j];
+                res.push_back(bit);
+            }
+            return res;
+        }
+        
+    }
+    
+    
+    
+    assert(false);
+}
+

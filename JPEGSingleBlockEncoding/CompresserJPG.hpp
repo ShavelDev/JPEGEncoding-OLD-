@@ -11,6 +11,7 @@
 #include <vector>
 #include <fstream>
 #include <cmath>
+#include <assert.h>
 
 using namespace std;
 
@@ -51,11 +52,16 @@ struct Block {
 };
 
 
+
+
 class CompresserJPG{
     
 private:
 
     
+    vector<bool> getCodeBySymbol(bitset<8> symbol);
+    vector<bool> getCodeByVal(int val);
+    vector<bool> getBitsOfVal(int val);
     
     void readBlock(int8_t block[64]);
     int getNumOfBits(int num);
