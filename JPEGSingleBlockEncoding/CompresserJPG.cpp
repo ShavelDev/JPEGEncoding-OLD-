@@ -581,12 +581,12 @@ CompresserJPG::CompresserJPG(string imageName){
     }
     cout << endl;
     
-    cout<< "getCodeByVal: "  << endl;
+   /* cout<< "getCodeByVal: "  << endl;
     test = getCodeByVal(2);
     for (int i = 0; i < test.size(); i++) {
         cout << test[i];
     }
-    cout << endl;
+    cout << endl;*/
     
     vector<bool> data;
     for (int i = 0; i < blocksY.size(); i++) {
@@ -596,6 +596,7 @@ CompresserJPG::CompresserJPG(string imageName){
     }
     
     writeToFile(data);
+    writeToFile2(data);
     
 }
 
@@ -615,7 +616,7 @@ vector<bool> CompresserJPG::getCodeBySymbol( bitset<8> symbol){
     
 }
 
-vector<bool> CompresserJPG::getCodeByVal( int val){
+vector<bool> CompresserJPG::getCodeByVal( bitset<8> val){
     
     for (int i = 0; i < codesDC.size(); i++) {
         if (codesDC[i].val == val) {
@@ -627,7 +628,6 @@ vector<bool> CompresserJPG::getCodeByVal( int val){
         }
     }
     
-    cout << "value: " << val << endl;
     assert(false);
     
 }
@@ -654,7 +654,7 @@ vector<bool> CompresserJPG::getBitsOfVal(int val){
 
 vector<bool> CompresserJPG::blockToBits(int8_t prevDC, Block b){
     vector<bool> bits;
-    vector<bool> codeDC = getCodeByVal(getNumOfBits((int)b.data[0]-(int)prevDC));
+    vector<bool> codeDC = getCodeByVal(getHuffmanSymbol(0, getNumOfBits((int)b.data[0]-(int)prevDC)));
     vector<bool> coeffDC = getBitsOfVal((int)b.data[0]-(int)prevDC);
     codeDC.insert(codeDC.begin(), coeffDC.begin(),coeffDC.end());
     bits.insert(bits.begin(), codeDC.begin(), codeDC.end());
@@ -740,7 +740,7 @@ void CompresserJPG::writeToFile(vector<bool> data){
     
     // SOF0 marker (Start of Frame, Baseline DCT)
     write16(jpegFile, 0xFFC0); // Marker
-    write16(jpegFile, 17);     // Length
+    write16(jpegFile, 11);     // Length
     write8(jpegFile, 8);       // Precision (8 bits)
     write16(jpegFile, 16);     // Image height
     write16(jpegFile, 16);     // Image width
@@ -792,7 +792,7 @@ void CompresserJPG::writeToFile(vector<bool> data){
     
     // SOS marker (Start of Scan)
     write16(jpegFile, 0xFFDA); // Marker
-    write16(jpegFile, 12);     // Length
+    write16(jpegFile, 8);     // Length
     write8(jpegFile, 1);       // Number of components (1 for grayscale)
     write8(jpegFile, 1);       // Component ID
     write8(jpegFile, 0);       // DC/AC Huffman table number
@@ -829,4 +829,107 @@ void CompresserJPG::writeComponents(ofstream &file, vector<bool> data){
         }
         file.put(static_cast<char>((uint8_t)buffer.to_ulong()));
     }
+}
+
+void CompresserJPG::writeToFile2(vector<bool> data){
+    std::ofstream out("output2.jpg", std::ios::binary);
+    
+    // SOI (Start of Image)
+    write16(out, 0xFFD8);
+    
+    // APP0 Marker
+    write16(out, 0xFFE0);
+    write16(out, 16); // Length
+    out.write("JFIF", 5);
+    write8(out, 1); // Version
+    write8(out, 1);
+    write8(out, 0); // Units
+    write16(out, 1); // X density
+    write16(out, 1); // Y density
+    write8(out, 0); // X thumbnail
+    write8(out, 0); // Y thumbnail
+    
+    // DQT (Define Quantization Table)
+    write16(out, 0xFFDB);
+    write16(out, 67); // Length
+    write8(out, 0); // Precision and identifier
+    
+    out.write(reinterpret_cast<const char*>(quantTableY), 64);
+    
+    // SOF0 (Start of Frame)
+    write16(out, 0xFFC0);
+    write16(out, 17); // Length
+    write8(out, 8); // Precision
+    write16(out, 16);
+    write16(out, 16);
+    write8(out, 1); // Number of components
+    write8(out, 1); // Component identifier
+    write8(out, 0x11); // Sampling factors
+    write8(out, 0); // Quantization table selector
+    
+    // DHT (Define Huffman Tables) for DC
+    write16(out, 0xFFC4);
+    write16(out, 19+codesDC.size()); // Length
+    write8(out, 0x00); // Table class and identifier
+    
+    
+    uint8_t codesLengthMapDC[16] = {};
+    for (int i = 0; i < codesDC.size(); i++) {
+        codesLengthMapDC[codesDC[i].branchDepth-1]++;
+    }
+    
+    
+    out.write(reinterpret_cast<const char*>(codesLengthMapDC), 16);
+    // Values for each code (example values)
+    const int sizeDC = (const int)codesDC.size();
+    uint8_t dcValues[sizeDC];
+    for (int i = 0; i < sizeDC; i++) {
+        bitset<8> bits(0);
+        vector<bool> coeffBits = getBitsOfVal((int)codesDC[i].val);
+        for (int j = 0; j < coeffBits.size(); j++) {
+            bits[j] = coeffBits[coeffBits.size() - j - 1];
+        }
+        dcValues[i] = codesDC[i].val;
+    }
+    out.write(reinterpret_cast<const char*>(dcValues), sizeDC);
+    
+    
+    // DHT (Define Huffman Tables) for AC
+    write16(out, 0xFFC4);
+    write16(out, 19 + codesAC.size()); // Length
+    write8(out, 0x10); // Table class and identifier
+    
+    
+    uint8_t codesLengthMapAC[16] = {};
+    for (int i = 0; i < codesAC.size(); i++) {
+        codesLengthMapAC[codesAC[i].branchDepth-1]++;
+    }
+    
+    
+   out.write(reinterpret_cast<const char*>(codesLengthMapAC), 16);
+    // Values for each code example values)
+    const int sizeAC = (const int)codesAC.size();
+    uint8_t acValues[sizeAC];
+    for (int i = 0; i < sizeAC; i++) {
+        acValues[i] = (uint8_t)codesAC[i].huffmanSym.to_ulong();
+    }
+    out.write(reinterpret_cast<const char*>(acValues), sizeAC);
+    
+    // SOS (Start of Scan)
+    write16(out, 0xFFDA);
+    write16(out, 8); // Length
+    write8(out, 1); // Number of components
+    write8(out, 1); // Component identifier
+    write8(out, 0); // Huffman table selectors
+    write8(out, 0); // Start of spectral selection
+    write8(out, 63); // End of spectral selection
+    write8(out, 0); // Successive approximation
+    
+    
+    writeComponents(out, data);
+    
+    // EOI (End of Image)
+    write16(out, 0xFFD9);
+    
+    out.close();
 }

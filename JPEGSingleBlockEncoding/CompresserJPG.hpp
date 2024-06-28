@@ -56,16 +56,16 @@ struct Block {
 
 class CompresserJPG{
     
-private:
+public:
     
     
     void writeComponents(ofstream& file, vector<bool> data);
     
     void writeToFile(vector<bool> data );
-
+    void writeToFile2(vector<bool> data );
     
     vector<bool> getCodeBySymbol(bitset<8> symbol);
-    vector<bool> getCodeByVal(int val);
+    vector<bool> getCodeByVal(bitset<8> val);
     
     //returns the number as bits ex: 10 => 1010, -10 => 0101
     vector<bool> getBitsOfVal(int val);
@@ -157,7 +157,7 @@ private:
     
     
     
-public:
+
     CompresserJPG(string imageName);
     
     
