@@ -63,6 +63,7 @@ public:
     
     void writeToFile(vector<bool> data );
     void writeToFile2(vector<bool> data );
+    void writeToFile3(vector<bool> data);
     
     vector<bool> getCodeBySymbol(bitset<8> symbol);
     vector<bool> getCodeByVal(bitset<8> val);
